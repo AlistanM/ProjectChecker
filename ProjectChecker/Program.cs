@@ -63,9 +63,9 @@ class Program
                     {
                         var text = page.Text;
 
-                        //Console.WriteLine($"    Текст страницы {page.Number}:");
-                        //Console.WriteLine(page.Text);
-                        //Console.WriteLine(new string('-', 50));
+                        Console.WriteLine($"    Текст страницы {page.Number}:");
+                        Console.WriteLine(page.Text);
+                        Console.WriteLine(new string('-', 50));
 
                         if (type == 1)
                         {
@@ -117,7 +117,9 @@ class Program
                                 descriptionIndex++;
                             }
 
-
+                            var projectPleaseMoneyPattern = @"(?<Cost>\d{1,3}(?:\s\d{3})*(?:,\d{2})|-)";
+                            Match projectPleaseMoney12Match = Regex.Match(text, projectPleaseMoneyPattern);
+                            application.Name12 = projectPleaseMoney12Match.Groups["Cost"].Value;                     
 
                             Console.WriteLine(application.Cost3);
                         }
