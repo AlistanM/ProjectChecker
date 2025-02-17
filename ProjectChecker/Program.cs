@@ -12,7 +12,7 @@ class Program
     static void Main(string[] args)
     {
 
-        var path = "C:\\Users\\Консультант1\\source\\repos\\ProjectChecker\\ProjectChecker\\Projects";
+        var path = "C:\\Users\\alist\\source\\repos\\ProjectChecker\\ProjectChecker\\Projects";
 
         string[] projects = Directory.GetDirectories(path);
         foreach (string project in projects)
@@ -87,7 +87,39 @@ class Program
                             Match projectTotalCost33Match = Regex.Match(text, projectTotalCost33Pattern);
                             application.TotalCost33 = projectTotalCost33Match.Groups["TotalCost"].Value;
 
-                            Console.WriteLine(application.TotalCost33);
+                            var projectPartCost33Pattern = @"(?<=\s|\b)(?<Index>\d)(?!\d|\.)(?<WorkType>.+?)(?=\d|--)(?<Cost>\d{1,3}(?:\s\d{3})*(?:,\d{2})|-)";
+                            var projectPartCost33Match = Regex.Matches(text, projectPartCost33Pattern);
+
+                            int costIndex = 1; // Для присвоения значений в Cost1, Cost2 и т.д.
+                            int descriptionIndex = 1; // Для присвоения значений в Description1, Description2 и т.д.
+                            foreach (Match match in projectPartCost33Match)
+                            {
+                                // Извлекаем группы из совпадения
+                                var cost = match.Groups["Cost"].Value.Trim();
+                                var workType = match.Groups["WorkType"].Value.Trim();
+
+                                // Присваиваем стоимость в соответствующее свойство (Cost1, Cost2 и т.д.)
+                                var costProperty = application.GetType().GetProperty($"Cost{costIndex}");
+                                if (costProperty != null)
+                                {
+                                    costProperty.SetValue(application, cost);
+                                }
+
+                                // Присваиваем описание в соответствующее свойство (Description1, Description2 и т.д.)
+                                var descriptionProperty = application.GetType().GetProperty($"Description{descriptionIndex}");
+                                if (descriptionProperty != null)
+                                {
+                                    descriptionProperty.SetValue(application, workType);
+                                }
+
+                                // Увеличиваем индекс для следующего совпадения
+                                costIndex++;
+                                descriptionIndex++;
+                            }
+
+
+
+                            Console.WriteLine(application.Cost3);
                         }
                         else if (type == 2)
                         {
@@ -100,12 +132,6 @@ class Program
                     }
                 }
             }
-
         }
-
-
-
-
     }
-
 }
