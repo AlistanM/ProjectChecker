@@ -19,13 +19,14 @@ namespace ProjectChecker.Data
         public string Cost4 { get; set; }
         public string Cost5 { get; set; }
         public string Cost6 { get; set; }
+        public string TotalCost33 { get; set; }
+
         public string Description1 { get; set; }
         public string Description2 { get; set; }
         public string Description3 { get; set; }
         public string Description4 { get; set; }
         public string Description5 { get; set; }
         public string Description6 { get; set; }
-        public string TotalCost33 { get; set; }
 
         public string MunicipalMoney4 {  get; set; }
         public string UdmurtMoney4 { get; set; }

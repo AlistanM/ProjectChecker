@@ -1,20 +1,22 @@
 ﻿
 using Aspose.Words;
 using ProjectChecker.Data;
-using System.IO;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.Content;
-using static System.Net.Mime.MediaTypeNames;
 
 class Program
 {
     static void Main(string[] args)
     {
 
-        var path = "C:\\Users\\alist\\source\\repos\\ProjectChecker\\ProjectChecker\\Projects";
+        var path = "C:\\Users\\Консультант1\\source\\repos\\ProjectChecker\\ProjectChecker\\Projects";
 
         string[] projects = Directory.GetDirectories(path);
+
+        List<Application> projectApps = new List<Application>();
+
         foreach (string project in projects)
         {
             Console.WriteLine($"  Найден проект: {project}");
@@ -33,10 +35,12 @@ class Program
                 doc.Save(filePath, SaveFormat.Pdf);
             }
 
+            var application = new ProjectChecker.Data.Application();
+
             //бежим по документам с расширением pdf
             Console.WriteLine($"   Чтение pdf файлов: ");
             string[] pdfFiles = Directory.GetFiles(project, "*.pdf");
-            foreach(string file in pdfFiles)
+            foreach (string file in pdfFiles)
             {
                 Console.WriteLine($"    Чтение {file} ");
                 using (PdfDocument document = PdfDocument.Open(file))
@@ -69,59 +73,95 @@ class Program
 
                         if (type == 1)
                         {
-                            var application = new ProjectChecker.Data.Application();
 
                             var projectName11Pattern = @"1\.1\.\s+(?<ProjectName11>.+?)\s+\(";
                             Match projectName11Match = Regex.Match(text, projectName11Pattern);
-                            application.Name11 = projectName11Match.Groups["ProjectName11"].Value;
+                            if (projectName11Match.Success != false)
+                            {
+                                application.Name11 = projectName11Match.Groups["ProjectName11"].Value;
+                            }
 
                             var projectName12Pattern = @"1\.1\.\s+(?<ProjectName12>.+?)\s+\(";
                             Match projectName12Match = Regex.Match(text, projectName12Pattern);
-                            application.Name12 = projectName12Match.Groups["ProjectName12"].Value;
+                            if (projectName12Match.Success != false)
+                            {
+                                application.Name12 = projectName12Match.Groups["ProjectName12"].Value;
+                            }
 
                             var projectAddress22Pattern = @"2\.2\.\s+Населенный пункт \(адрес\):\s+(?<ProjectAddress22>.+?)(?=3\.\s+Описание проекта)";
                             Match projectAddress22Match = Regex.Match(text, projectAddress22Pattern);
-                            application.Address22 = projectAddress22Match.Groups["ProjectAddress22"].Value;
+                            if (projectAddress22Match.Success != false)
+                            {
+                                application.Address22 = projectAddress22Match.Groups["ProjectAddress22"].Value;
+                            }
 
                             var projectTotalCost33Pattern = @"Итого(?<TotalCost>.+?)(?=3\.4\.)";
                             Match projectTotalCost33Match = Regex.Match(text, projectTotalCost33Pattern);
-                            application.TotalCost33 = projectTotalCost33Match.Groups["TotalCost"].Value;
+                            if (projectTotalCost33Match.Success != false)
+                            { 
+                                application.TotalCost33 = projectTotalCost33Match.Groups["TotalCost"].Value;
+                            }
 
                             var projectPartCost33Pattern = @"(?<=\s|\b)(?<Index>\d)(?!\d|\.)(?<WorkType>.+?)(?=\d|--)(?<Cost>\d{1,3}(?:\s\d{3})*(?:,\d{2})|-)";
                             var projectPartCost33Match = Regex.Matches(text, projectPartCost33Pattern);
 
                             int costIndex = 1; // Для присвоения значений в Cost1, Cost2 и т.д.
                             int descriptionIndex = 1; // Для присвоения значений в Description1, Description2 и т.д.
-                            foreach (Match match in projectPartCost33Match)
+                            if (projectPartCost33Match.Count == 6)
                             {
-                                // Извлекаем группы из совпадения
-                                var cost = match.Groups["Cost"].Value.Trim();
-                                var workType = match.Groups["WorkType"].Value.Trim();
-
-                                // Присваиваем стоимость в соответствующее свойство (Cost1, Cost2 и т.д.)
-                                var costProperty = application.GetType().GetProperty($"Cost{costIndex}");
-                                if (costProperty != null)
+                                foreach (Match match in projectPartCost33Match)
                                 {
-                                    costProperty.SetValue(application, cost);
-                                }
+                                    // Извлекаем группы из совпадения
+                                    var cost = match.Groups["Cost"].Value.Trim();
+                                    var workType = match.Groups["WorkType"].Value.Trim();
 
-                                // Присваиваем описание в соответствующее свойство (Description1, Description2 и т.д.)
-                                var descriptionProperty = application.GetType().GetProperty($"Description{descriptionIndex}");
-                                if (descriptionProperty != null)
-                                {
-                                    descriptionProperty.SetValue(application, workType);
-                                }
+                                    // Присваиваем стоимость в соответствующее свойство (Cost1, Cost2 и т.д.)
+                                    var costProperty = application.GetType().GetProperty($"Cost{costIndex}");
+                                    if (costProperty != null)
+                                    {
+                                        costProperty.SetValue(application, cost);
+                                    }
 
-                                // Увеличиваем индекс для следующего совпадения
-                                costIndex++;
-                                descriptionIndex++;
+                                    // Присваиваем описание в соответствующее свойство (Description1, Description2 и т.д.)
+                                    var descriptionProperty = application.GetType().GetProperty($"Description{descriptionIndex}");
+                                    if (descriptionProperty != null)
+                                    {
+                                        descriptionProperty.SetValue(application, workType);
+                                    }
+
+                                    // Увеличиваем индекс для следующего совпадения
+                                    costIndex++;
+                                    descriptionIndex++;
+                                }
                             }
 
-                            var projectPleaseMoneyPattern = @"(?<Cost>\d{1,3}(?:\s\d{3})*(?:,\d{2})|-)";
-                            Match projectPleaseMoney12Match = Regex.Match(text, projectPleaseMoneyPattern);
-                            application.Name12 = projectPleaseMoney12Match.Groups["Cost"].Value;                     
+                            var projectPleaseMoneyPattern = @"(?<PleaseMoney>\d{1,3}(?:\s\d{3})*(?:,\d{1}).+?)(?=2Иной)";
+                            Match projectPleaseMoneyMatch = Regex.Match(text, projectPleaseMoneyPattern);
+                            if (projectPleaseMoneyMatch.Success != false)
+                            {
+                                application.MunicipalMoney4 = projectPleaseMoneyMatch.Groups["PleaseMoney"].Value;
+                            }
 
-                            Console.WriteLine(application.Cost3);
+                            var projectUdmurtMoneyPattern = @"(?<=не более 1 000 тыс\. рублей\))\s*\d{1,3}(?:\s\d{3})*,\d{2}";
+                            Match projectUdmurtPleaseMoneyMatch = Regex.Match(text, projectUdmurtMoneyPattern);
+                            if (projectUdmurtPleaseMoneyMatch.Success != false)
+                            {
+                                application.UdmurtMoney4 = projectUdmurtPleaseMoneyMatch.Value;
+                            }
+
+                            var projectTotalPleaseMoneyPattern = @"(?<=\D)(?<TotalMoney4>\d{1,3}(?:\s\d{3})*,\d{2})(?=5\.)";
+                            Match projectTotalPleaseMoneyMatch = Regex.Match(text, projectTotalPleaseMoneyPattern);
+                            if (projectTotalPleaseMoneyMatch.Success != false)
+                            {
+                                application.TotalCost4 = projectTotalPleaseMoneyMatch.Groups["TotalMoney4"].Value;
+                            }
+
+                            projectApps.Add(application);
+
+                            foreach (PropertyInfo prop in application.GetType().GetProperties())
+                            {
+                                Console.WriteLine($"{prop.Name}: {prop.GetValue(application)}");
+                            }
                         }
                         else if (type == 2)
                         {
