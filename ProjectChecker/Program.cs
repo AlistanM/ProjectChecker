@@ -1,8 +1,5 @@
 ﻿using ProjectChecker.Data;
 using ProjectChecker.Services;
-using System.Text.RegularExpressions;
-using UglyToad.PdfPig;
-using UglyToad.PdfPig.Content;
 
 class Program
 {
@@ -16,11 +13,13 @@ class Program
         string[] projects = Directory.GetDirectories(path);
         List<Application> projectApps = new List<Application>();
 
+
+
         foreach (string project in projects)
         {
 
-            toPDFservice.DockToPDF(project);
-            
+            toPDFservice.DocxToPDF(project);
+
 
             //бежим по документам с расширением pdf
             Console.WriteLine($"   Чтение pdf файлов: ");
@@ -33,7 +32,7 @@ class Program
         }
 
         var i = 1;
-        foreach(var application in  projectApps)
+        foreach (var application in projectApps)
         {
             Console.WriteLine($"{i}: {application.Name11}");
             i++;

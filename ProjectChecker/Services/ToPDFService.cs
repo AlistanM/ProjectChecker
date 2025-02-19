@@ -9,7 +9,7 @@ namespace ProjectChecker.Services
 {
     public class ToPDFService
     {
-        public void DockToPDF(string filePath)
+        public void DocxToPDF(string filePath)
         {
             Console.WriteLine($"  Найден проект: {filePath}");
             //бежим по документам с расширение docx
@@ -27,5 +27,7 @@ namespace ProjectChecker.Services
                 doc.Save(newFilePath, SaveFormat.Pdf);
             }
         }
+
+
     }
 }

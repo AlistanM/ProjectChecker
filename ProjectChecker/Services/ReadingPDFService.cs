@@ -1,12 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using ImageMagick;
+using iText.Kernel.Pdf;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using UglyToad.PdfPig.Content;
-using UglyToad.PdfPig;
-using ProjectChecker.Data;
+using Tesseract;
+using Application = ProjectChecker.Data.Application;
 
 namespace ProjectChecker.Services
 {
@@ -15,9 +11,60 @@ namespace ProjectChecker.Services
         public void readPDF(string file, List<Application> projectApps)
         {
             var application = new Application();
+            var hasImage = PdfHasImage(file);
 
+            if (!hasImage)
+            {
+                var app = readTextPdf(file, application);
+                projectApps.Add(app);
+            }
+            else
+            {
+                var app = readTextFromImagePdf(file, application);
+                Console.WriteLine(app);
+            }
+
+        }
+
+
+        private static bool PdfHasImage(string filePath)
+        {
+            using (PdfReader reader = new PdfReader(filePath))
+            using (PdfDocument pdfDoc = new PdfDocument(reader))
+            {
+                for (int i = 1; i <= pdfDoc.GetNumberOfPages(); i++)
+                {
+                    var page = pdfDoc.GetPage(i);
+                    var resources = page.GetResources();
+                    var xObjects = resources.GetResource(PdfName.XObject);
+
+                    if (xObjects != null)
+                    {
+                        foreach (var xObjectEntry in xObjects.EntrySet())
+                        {
+                            var obj = xObjectEntry.Value;
+                            if (obj.IsStream())
+                            {
+                                var xObjStream = (PdfStream)obj;
+                                var subtype = xObjStream.GetAsName(PdfName.Subtype);
+
+                                if (PdfName.Image.Equals(subtype)) // Проверяем, является ли объект изображением
+                                {
+                                    //Console.WriteLine($"Изображение найдено на странице {i}");
+                                    return true; // Возвращаем true, если изображение найдено
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return false; // Если ни на одной странице изображения не найдено
+        }
+
+        private Application readTextPdf(string file, Application application)
+        {
             Console.WriteLine($"    Чтение {file} ");
-            using (PdfDocument document = PdfDocument.Open(file))
+            using (UglyToad.PdfPig.PdfDocument document = UglyToad.PdfPig.PdfDocument.Open(file))
             {
                 Console.WriteLine($"    Документ содержит {document.NumberOfPages} страниц.");
 
@@ -37,7 +84,7 @@ namespace ProjectChecker.Services
                     type = 3;
                 }
 
-                foreach (Page page in document.GetPages())
+                foreach (UglyToad.PdfPig.Content.Page page in document.GetPages())
                 {
                     var text = page.Text;
 
@@ -140,11 +187,69 @@ namespace ProjectChecker.Services
                     {
                         Console.WriteLine("Выписка из сводной бюджетной росписи.");
                     }
-
                 }
 
-                projectApps.Add(application);
+                return application;
             }
+        }
+
+
+
+
+        private string readTextFromImagePdf(string file, Application application)
+        {
+            var imagepath = ConvertPdfToImages(file);
+            var text = PerformOCR(imagepath);
+
+            return $"В файле {Path.GetFileName(file)} присутсвуют сканы";
+        }
+
+        private string ConvertPdfToImages(string file)
+        {
+            var directory = Path.GetDirectoryName(file);
+            string outputDir = directory + "\\ImageToPdf";
+
+            Directory.CreateDirectory(outputDir);
+            using (MagickImageCollection images = new MagickImageCollection())
+            {
+                images.Read(file);
+
+                int page = 1;
+                foreach (MagickImage image in images)
+                {
+                    //проверить, переделать, понять, простить
+                    image.Format = MagickFormat.Png;
+                    image.Contrast();
+                    image.Resize(1000, 1000);
+                    image.Despeckle();
+
+                    string outputFilePath = Path.Combine(outputDir, $"page-{page}.png");
+                    image.Write(outputFilePath);
+                    page++;
+                }
+            }
+
+            return outputDir;
+        }
+        private static string PerformOCR(string imagePath)
+        {
+            string fullText = "";
+
+            var images = Directory.GetFiles(imagePath);
+            using (var engine = new TesseractEngine(@"C:\Users\Консультант1\source\repos\ProjectChecker\ProjectChecker\tesdata\", "rus", EngineMode.Default))
+            {
+                foreach (var image in images)
+                {
+                    using (var img = Pix.LoadFromFile(image))
+                    {
+                        using (var page = engine.Process(img))
+                        {
+                            fullText += page.GetText();
+                        }
+                    }
+                }
+            }
+            return fullText;
         }
     }
 }
