@@ -1,9 +1,5 @@
-﻿using ImageMagick;
-using iText.Kernel.Pdf;
-using ProjectChecker.Data;
-using System.Linq;
+﻿using ProjectChecker.Data;
 using System.Text.RegularExpressions;
-using Tesseract;
 using Application = ProjectChecker.Data.Application;
 
 namespace ProjectChecker.Services
@@ -16,8 +12,8 @@ namespace ProjectChecker.Services
             var egrn = new EGRN();
             var budget = new BudgetStatement();
 
-            var app = readTextPdf(file, project, application, egrn, budget);
-            
+            readTextPdf(file, project, application, egrn, budget);
+
         }
 
         private void readTextPdf(string file, Project project, Application application, EGRN egrn, BudgetStatement budget)
@@ -171,7 +167,7 @@ namespace ProjectChecker.Services
                     }
                 }
 
-                
+
             }
         }
     }
