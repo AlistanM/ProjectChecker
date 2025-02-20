@@ -1,5 +1,6 @@
 ﻿using ImageMagick;
 using iText.Kernel.Pdf;
+using ProjectChecker.Data;
 using System.Text.RegularExpressions;
 using Tesseract;
 using Application = ProjectChecker.Data.Application;
@@ -8,22 +9,14 @@ namespace ProjectChecker.Services
 {
     public class ReadingPDFService
     {
-        public void readPDF(string file, List<Application> projectApps)
+        public void readPDF(string file, List<Project> projectApps)
         {
             var application = new Application();
+            var egrn = new EGRN();
             var hasImage = PdfHasImage(file);
 
-            if (!hasImage)
-            {
-                var app = readTextPdf(file, application);
-                projectApps.Add(app);
-            }
-            else
-            {
-                var app = readTextFromImagePdf(file, application);
-                Console.WriteLine(app);
-            }
-
+            var app = readTextPdf(file, application, egrn);
+            
         }
 
 
@@ -61,7 +54,7 @@ namespace ProjectChecker.Services
             return false; // Если ни на одной странице изображения не найдено
         }
 
-        private Application readTextPdf(string file, Application application)
+        private Application readTextPdf(string file, Application application, EGRN egrn)
         {
             Console.WriteLine($"    Чтение {file} ");
             using (UglyToad.PdfPig.PdfDocument document = UglyToad.PdfPig.PdfDocument.Open(file))
@@ -88,21 +81,21 @@ namespace ProjectChecker.Services
                 {
                     var text = page.Text;
 
-                    //Console.WriteLine($"    Текст страницы {page.Number}:");
-                    //Console.WriteLine(page.Text);
-                    //Console.WriteLine(new string('-', 50));
+                    Console.WriteLine($"    Текст страницы {page.Number}:");
+                    Console.WriteLine(page.Text);
+                    Console.WriteLine(new string('-', 50));
 
                     if (type == 1)
                     {
 
-                        var projectName11Pattern = @"1\.1\.\s+(?<ProjectName11>.+?)\s+\(";
+                        var projectName11Pattern = @"1\.1(\.| )\s+(?<ProjectName11>.+?)\s+\(";
                         Match projectName11Match = Regex.Match(text, projectName11Pattern);
                         if (projectName11Match.Success != false)
                         {
                             application.Name11 = projectName11Match.Groups["ProjectName11"].Value;
                         }
 
-                        var projectName12Pattern = @"1\.1\.\s+(?<ProjectName12>.+?)\s+\(";
+                        var projectName12Pattern = @"1\.2\.\s+(?<ProjectName12>.+?)\s+\(";
                         Match projectName12Match = Regex.Match(text, projectName12Pattern);
                         if (projectName12Match.Success != false)
                         {
@@ -128,7 +121,7 @@ namespace ProjectChecker.Services
 
                         int costIndex = 1; // Для присвоения значений в Cost1, Cost2 и т.д.
                         int descriptionIndex = 1; // Для присвоения значений в Description1, Description2 и т.д.
-                        if (projectPartCost33Match.Count == 6)
+                        if (projectPartCost33Match.Count >= 6)
                         {
                             foreach (Match match in projectPartCost33Match)
                             {
@@ -138,14 +131,14 @@ namespace ProjectChecker.Services
 
                                 // Присваиваем стоимость в соответствующее свойство (Cost1, Cost2 и т.д.)
                                 var costProperty = application.GetType().GetProperty($"Cost{costIndex}");
-                                if (costProperty != null)
+                                if (costProperty != null && costIndex <= 6)
                                 {
                                     costProperty.SetValue(application, cost);
                                 }
 
                                 // Присваиваем описание в соответствующее свойство (Description1, Description2 и т.д.)
                                 var descriptionProperty = application.GetType().GetProperty($"Description{descriptionIndex}");
-                                if (descriptionProperty != null)
+                                if (descriptionProperty != null && descriptionIndex <= 6)
                                 {
                                     descriptionProperty.SetValue(application, workType);
                                 }
@@ -156,7 +149,7 @@ namespace ProjectChecker.Services
                             }
                         }
 
-                        var projectPleaseMoneyPattern = @"(?<PleaseMoney>\d{1,3}(?:\s\d{3})*(?:,\d{1}).+?)(?=2Иной)";
+                        var projectPleaseMoneyPattern = @"проекта\)(?<PleaseMoney>\d{1,3}(?:\s\d{3})*(?:,\d{1}).+?)(?=2Иной)";
                         Match projectPleaseMoneyMatch = Regex.Match(text, projectPleaseMoneyPattern);
                         if (projectPleaseMoneyMatch.Success != false)
                         {
@@ -179,9 +172,32 @@ namespace ProjectChecker.Services
                     }
                     else if (type == 2)
                     {
+                        var projectEgrnAddresPattern = @"Местоположение:(?<Addres>.+?)(?=Площадь)";
+                        Match projectEgrnAddresMatch = Regex.Match(text, projectEgrnAddresPattern);
+                        if (projectEgrnAddresMatch.Success != false)
+                        {
+                            egrn.Address = projectEgrnAddresMatch.Groups["Addres"].Value;
+                        }
 
+                        var projectEgrnRightHolderPattern = @"\(правообладатели\):(?<RightHolder>.+?)(?=Сведения)";
+                        var projectEgrnRightHolderMatch = Regex.Matches(text, projectEgrnRightHolderPattern);
+                        foreach (Match match in projectEgrnRightHolderMatch)
+                        {
+                            // Извлекаем группы из совпадения
+                            var rightHolder = match.Groups["RightHolder"].Value.Trim();
 
-                        Console.WriteLine("Выписка из ЕГРН.");
+                            egrn.RightHolder.Add(rightHolder);
+                        }
+
+                        var projectRightPattern = @"права:(?<Right>.+?)(?=18)";
+                        var projectRightHolderMatch = Regex.Matches(text, projectRightPattern);
+                        foreach (Match match in projectRightHolderMatch)
+                        {
+                            // Извлекаем группы из совпадения
+                            var right = match.Groups["Right"].Value.Trim();
+
+                            egrn.Right.Add(right);
+                        }
                     }
                     else if (type == 3)
                     {

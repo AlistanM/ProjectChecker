@@ -1,5 +1,6 @@
 ﻿using ProjectChecker.Data;
 using ProjectChecker.Services;
+using System.Reflection;
 
 class Program
 {
@@ -11,7 +12,7 @@ class Program
         var readService = new ReadingPDFService();
 
         string[] projects = Directory.GetDirectories(path);
-        List<Application> projectApps = new List<Application>();
+        List<Project> projectApps = new List<Project>();
 
 
 
@@ -34,8 +35,23 @@ class Program
         var i = 1;
         foreach (var application in projectApps)
         {
-            Console.WriteLine($"{i}: {application.Name11}");
-            i++;
+            if (application == null) continue;
+
+            Type type = application.GetType();
+
+            foreach (PropertyInfo property in type.GetProperties())
+            {
+                // Получаем имя свойства
+                string name = property.Name;
+
+                // Получаем значение свойства
+                object value = property.GetValue(application);
+
+                // Выводим имя и значение свойства
+                Console.WriteLine($"{name}: {value}");
+            }
         }
+
+
     }
 }
