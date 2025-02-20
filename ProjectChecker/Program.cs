@@ -21,6 +21,7 @@ class Program
 
             toPDFservice.DocxToPDF(project);
 
+            Project proj = new Project();
 
             //бежим по документам с расширением pdf
             Console.WriteLine($"   Чтение pdf файлов: ");
@@ -28,8 +29,10 @@ class Program
 
             foreach (string file in pdfFiles)
             {
-                readService.readPDF(file, projectApps);
+                readService.readPDF(file, proj);
             }
+
+            projectApps.Add(proj);
         }
 
         var i = 1;
